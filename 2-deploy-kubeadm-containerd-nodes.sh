@@ -1,6 +1,6 @@
 #!/bin/bash
 NODES=$(echo worker{1..2})
-for NODE in ${NODES}; do multipass launch --name ${NODE} --cpus 2 --memory 2G --disk 8G; done
+for NODE in ${NODES}; do mmultipass launch 24.04 --name ${NODE} --cpus 2 --memory 2G --disk 8G; done
 for NODE in ${NODES}; do
 multipass transfer install_tools.sh ${NODE}:
 multipass exec ${NODE} -- bash -c 'cd $HOME'
