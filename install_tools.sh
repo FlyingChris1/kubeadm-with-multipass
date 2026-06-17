@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-containerdVersion=1.3.0
 
 
 function welcome_to_demo {
@@ -8,54 +7,38 @@ echo 'welcome to CRI and Kubernetes demo'
 }
 function install_tools {
 sudo apt-get update && sudo apt-get install -y libseccomp2 apt-transport-https curl
-## add key
-sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-## add repository
-sudo touch /etc/apt/sources.list.d/kubernetes.list
-cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
-deb https://apt.kubernetes.io/ kubernetes-xenial main
-EOF
+sudo mkdir -p /etc/apt/keyrings
+
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.32/deb/ /' \
+  | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 }
 
-function download_containerd_tarball {
-echo 'downloading  containerd 1.3.0..'
-sudo wget https://storage.googleapis.com/cri-containerd-release/cri-containerd-${containerdVersion}.linux-amd64.tar.gz
-}
-
-function verify_checksum {
-localSha=$(sha256sum cri-containerd-${containerdVersion}.linux-amd64.tar.gz | awk '{ print $1 }')
-remoteSha=$(curl https://storage.googleapis.com/cri-containerd-release/cri-containerd-${containerdVersion}.linux-amd64.tar.gz.sha256)
-if [ $localSha = $remoteSha ]
-then
-  echo 'containerd tarball is valid :)'
-else
-  echo 'containerd tarball is not valid :('
-fi
-}
-
 function setup_containerd {
-echo 'the tarball is composed from :'
-sudo tar -tf cri-containerd-${containerdVersion}.linux-amd64.tar.gz
-sudo tar --no-overwrite-dir -C / -xzf cri-containerd-${containerdVersion}.linux-amd64.tar.gz
-sudo systemctl start containerd
+sudo apt-get update
+sudo apt-get install -y containerd
+
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml > /dev/null
+
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+
+sudo systemctl restart containerd
+sudo systemctl enable containerd
 }
 
-function create_containerd_kubelet_conf {
-cat <<EOF | sudo tee /etc/systemd/system/kubelet.service.d/0-containerd.conf
-[Service]
-Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --runtime-request-timeout=15m --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
-EOF
-sudo systemctl daemon-reload
-}
 
 function bring_up_cluster {
-sudo modprobe br_netfilter
-sudo sysctl net.bridge.bridge-nf-call-iptables=1
-echo 1 |  sudo tee  /proc/sys/net/ipv4/ip_forward
-sudo kubeadm init
+    sudo modprobe br_netfilter
+    sudo sysctl net.bridge.bridge-nf-call-iptables=1
+    echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
+
+    sudo kubeadm init --pod-network-cidr=192.168.0.0/16
 }
 
 function setup_kubectl_conf {

@@ -1,17 +1,19 @@
 #!/bin/bash
+set -e
+
 NODES=$(echo worker{1..2})
 
+JOIN_CMD=$(multipass exec master -- bash -c "sudo kubeadm token create --print-join-command")
+
 for NODE in ${NODES}; do
-multipass exec ${NODE} -- bash -c "sudo mkdir -p /home/ubuntu/.kube/"
-multipass exec ${NODE} -- bash -c "sudo chown ubuntu:ubuntu /home/ubuntu/.kube/"
-multipass transfer kubeconfig.yaml ${NODE}:/home/ubuntu/.kube/config
-multipass exec ${NODE} -- bash -c "sudo kubeadm token create --print-join-command >> kubeadm_join_cmd.sh"
-multipass exec ${NODE} -- bash -c "sudo chmod +x kubeadm_join_cmd.sh"
-multipass exec ${NODE} -- bash -c "sudo sh ./kubeadm_join_cmd.sh"
+  multipass exec ${NODE} -- bash -c "sudo ${JOIN_CMD}"
 done
+
 sleep 30
-KUBECONFIG=kubeconfig.yaml kubectl label node worker1 node-role.kubernetes.io/node=
-KUBECONFIG=kubeconfig.yaml kubectl label node worker2 node-role.kubernetes.io/node=
-KUBECONFIG=kubeconfig.yaml kubectl get nodes
+
+KUBECONFIG=kubeconfig.yaml kubectl label node worker1 node-role.kubernetes.io/node= --overwrite
+KUBECONFIG=kubeconfig.yaml kubectl label node worker2 node-role.kubernetes.io/node= --overwrite
+KUBECONFIG=kubeconfig.yaml kubectl get nodes -o wide
+
 echo "############################################################################"
 echo "Enjoy :-)"
