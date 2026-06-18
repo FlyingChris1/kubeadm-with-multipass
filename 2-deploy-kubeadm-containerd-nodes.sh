@@ -1,6 +1,11 @@
+set -euo pipefail
 #!/bin/bash
+set -euo pipefail
+source ./common.sh
 NODES=$(echo worker{1..2})
-for NODE in ${NODES}; do mmultipass launch 24.04 --name ${NODE} --cpus 2 --memory 2G --disk 8G; done
+for NODE in ${NODES}; do
+  launch_instance "${NODE}"
+done
 for NODE in ${NODES}; do
 multipass transfer install_tools.sh ${NODE}:
 multipass exec ${NODE} -- bash -c 'cd $HOME'

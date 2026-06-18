@@ -1,5 +1,8 @@
+set -euo pipefail
 #!/bin/bash
-multipass launch 24.04 --name master --cpus 2 --memory 2G --disk 8G
+set -euo pipefail
+source ./common.sh
+launch_instance master
 multipass transfer install_tools.sh master:
 multipass exec master -- bash -c 'sudo chmod +x $HOME/install_tools.sh'
 multipass exec master -- bash -c 'cd $HOME'
@@ -11,8 +14,8 @@ multipass exec master -- bash -c 'sudo cat /etc/kubernetes/admin.conf' > kubecon
 # export KUBECONFIG=kubeconfig.yaml
 # kubectl apply -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
 echo "now deploying calico ...."
-KUBECONFIG=kubeconfig.yaml kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.30.0/manifests/calico.yaml
-KUBECONFIG=kubeconfig.yaml kubectl rollout status daemonset calico-node -n kube-system
+KUBECONFIG=kubeconfig.yaml kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+KUBECONFIG=kubeconfig.yaml kubectl rollout status daemonset kube-flannel-ds -n kube-flannel
 KUBECONFIG=kubeconfig.yaml kubectl get nodes -o wide
 echo "Enjoy the kubeadm with containerd on Multipass"
 echo "Now deploying the worker nodes"
