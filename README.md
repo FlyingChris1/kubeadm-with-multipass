@@ -1,177 +1,340 @@
-![kubeadm-multipass.png](kubeadm-multipass.png)
+# Kubernetes on Multipass
 
-# Multi-Node Kubernetes 1.18.2 with kubeadm on local multipass cloud with Docker, Containerd or CRI-O and Rancher Server on top
+Deploy a production-style multi-node Kubernetes cluster on your local machine using **Multipass**, **kubeadm**, and **containerd**.
 
-These simple scripts deploy a multi-node Kubernetes 1.17.0 with kubeadm on multipass VMs with Containerd, Docker or CRI-O on your local machine in about 6 minutes, depending on your internet speed.
+This project creates a complete Kubernetes environment consisting of:
 
-## About Multipass
+- 1 Control Plane node
+- 2 Worker nodes
+- Kubernetes v1.34.x
+- Containerd runtime
+- Flannel CNI
+- MetalLB Load Balancer
+- Traefik Ingress Controller
+- Optional Rancher Management Platform
 
-https://multipass.run/
+The entire cluster runs locally on Multipass virtual machines and is ideal for learning Kubernetes, testing workloads, CI/CD experiments, and local platform development.
 
-## Prerequsists
+---
 
-You need kubectl and multipass installed on your laptop.
+## Features
 
-### Install multipass (on MacOS Catalina or Linux)
+- Kubernetes v1.34.x
+- Ubuntu 24.04 LTS
+- Containerd as container runtime
+- Flannel networking
+- MetalLB for LoadBalancer services
+- Traefik Ingress Controller
+- Rancher support
+- Multi-node cluster (1 control plane + 2 workers)
+- Automated node provisioning with Multipass
+- Automatic worker node joining
+- SSH connectivity between cluster nodes
 
-Get the latest Multipass here:
+---
 
-https://github.com/CanonicalLtd/multipass/releases
+## Table of Contents
 
-## Installation (3 node with containerd)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+- [Optional](#Optional)
+- [Cleanup](#cleanup)
+- [Cluster Architecture](#cluster-architecture)
 
-Deploy the master node, 2 worker nodes and join the worker nodes into the cluster step by step:
+---
+
+## Prerequisites
+
+The following tools must be installed on your workstation.
+
+### macOS
+
+Install Multipass:
+
+```bash
+brew install --cask multipass
+```
+
+Install kubectl:
+
+```bash
+brew install kubectl
+```
+
+Install Helm:
+
+```bash
+brew install helm
+```
+
+Optional: Install mkcert for local TLS certificates:
+
+```bash
+brew install mkcert
+mkcert --install
+```
+
+### Linux
+
+Install:
+
+- Multipass
+- kubectl
+- Helm
+
+Useful links:
+
+- https://multipass.run
+- https://kubernetes.io/docs/tasks/tools/
+- https://helm.sh/docs/intro/install/
+
+---
+
+## Quick Start
+
+Clone the repository:
+
+```bash
+git clone https://github.com/<your-org>/kubeadm-with-multipass.git
+cd kubeadm-with-multipass
+```
+
+Deploy the Kubernetes control plane:
 
 ```bash
 ./1-deploy-kubeadm-containerd-master.sh
+```
+
+Deploy the worker nodes:
+
+```bash
 ./2-deploy-kubeadm-containerd-nodes.sh
+```
+
+Join worker nodes to the cluster:
+
+```bash
 ./3-kubeadm_join_nodes.sh
 ```
 
-or deploy with a single command:
+Export kubeconfig:
 
 ```bash
-./deploy-bonsai-containerd.sh
+export KUBECONFIG=$PWD/kubeconfig.yaml
 ```
 
-## Installation (3 node with docker)
-
-Deploy the master node, 2 worker nodes and join the worker nodes into the cluster step by step:
+Verify the cluster:
 
 ```bash
-./1-deploy-kubeadm-master.sh
-./2-deploy-kubeadm-nodes.sh
-./3-kubeadm_join_nodes.sh
+kubectl get nodes -o wide
 ```
 
-or deploy with a single command:
+Expected output:
 
-```bash
-./deploy.sh
+```text
+NAME      STATUS   ROLES           VERSION
+master    Ready    control-plane   v1.34.x
+worker1   Ready    node            v1.34.x
+worker2   Ready    node            v1.34.x
 ```
 
-You should get something similar to this at the end:
+---
+
+## Usage
+
+Export kubeconfig:
 
 ```bash
-NAME      STATUS   ROLES    AGE     VERSION
-master    Ready    master   8m55s   v1.17.0
-worker1   Ready    node     3m45s   v1.17.0
-worker2   Ready    node     3m24s   v1.17.0
-############################################################################
-Enjoy and learn to love learning :-)
-Total runtime in minutes was: 06:30
-############################################################################
+export KUBECONFIG=$PWD/kubeconfig.yaml
 ```
 
-## Just for fun (kubeadm with CRI-O)
-
-Launch a single Ubuntu VM with multipass and try CRI-O with kubeadm and podman:
+Check cluster status:
 
 ```bash
-multipass launch ubuntu --name master --cpus 2 --mem 2G --disk 8G
+kubectl get nodes
+kubectl get pods -A
+kubectl get svc -A
+```
+
+Inspect node details:
+
+```bash
+kubectl describe node master
+```
+
+View workloads:
+
+```bash
+kubectl get deployments -A
+kubectl get ingress -A
+```
+
+Common commands:
+
+```bash
+kubectl get nodes
+kubectl get pods -A
+kubectl get svc -A
+kubectl get ingress -A
+```
+
+SSH into the control plane:
+
+```bash
 multipass shell master
-sudo -i
-wget https://raw.githubusercontent.com/arashkaffamanesh/kubeadm-multipass/master/crio-install.sh
-chmod +x crio-install.sh
-./crio-install.sh
 ```
 
-## Deploy Rancher Server
-
-You can deploy Rancher Server on top of your kubeadm cluster with:
+SSH from master to workers:
 
 ```bash
-./4-deploy-rancher-on-kubeadm.sh
-# a browser tab should pop up to Rancher Server UI
+ssh worker1
+ssh worker2
 ```
 
-## Install MetalLB
+---
+
+## Optional
+
+### Install MetalLB
+
+MetalLB provides LoadBalancer functionality for local Kubernetes clusters.
+
+Install:
 
 ```bash
 ./install-metal-lb.sh
 ```
 
-## Traefik with mkcert to create a local certificate authority with wildcard certificate
+Verify:
 
 ```bash
-brew install mkcert
-mkcert --install
-# provision a wildcard certificate for our new local domain
-mkcert '*.k8s.local'
-# This will create two files: _wildcard.k8s.local-key.pem and _wildcard.k8s.local.pem.
-kubectl -n kube-system create secret tls traefik-tls-cert --key=_wildcard.k8s.local-key.pem --cert=_wildcard.k8s.local.pem
+kubectl get pods -n metallb-system
 ```
 
-### Setting up Traefik
+Check services:
 
 ```bash
-kubectl apply -f configmap.yml
-kubectl create -f traefik.yaml
-kubectl apply -f rbac.yml
-kubectl get pods -n kube-system | grep traefik
-# you should see a line that looks like the following
-traefik-ingress-controller-68c5fbccbd-5kjvw   1/1     Running
+kubectl get svc -A
 ```
 
-### Testing with whoami
+Services of type `LoadBalancer` should receive an external IP address.
+
+---
+
+### Install Traefik
+
+Install Traefik Ingress Controller:
 
 ```bash
-kubectl create -f whoami-deployment.yml
-# create a host entry in /etc/hosts like this to the IP of the traefik ingress controller svc
-# 192.168.64.23 whoami.k8s.local 
-curl https://whoami.k8s.local
-# or
-open https://whoami.k8s.local
-# it should work
+./install-traefik.sh
 ```
 
-With that you can eypose services over a valid HTTPS connection with your private local CA!
-
-### Exercise 
-
-Change the whoami service type to LoadBalancer and see what happens :-)
-
-Change the rancher service type to LoadBalancer and adapt the host entry in rancher ingress to point to rancher.k8s.local and make sure your /etc/hosts has an entry like this:
+Verify:
 
 ```bash
-192.168.64.23 whoami.k8s.local
-192.168.64.23 rancher.k8s.local
+kubectl get pods -n traefik
+kubectl get svc -n traefik
 ```
 
-N.B.: 192.168.64.23 is the IP of the traefik ingress controller service!
+Expected:
+
+```text
+NAME      TYPE           EXTERNAL-IP
+traefik   LoadBalancer   192.168.x.x
+```
+
+---
+
+### Install Rancher
+
+Install Rancher on top of the Kubernetes cluster:
 
 ```bash
-open https://rancher.k8s.local
-#Should take you via HTTPS to Rancher without any warnings :-)
+./4-deploy-rancher-on-kubeadm.sh
 ```
 
-Your valid certificate should look something like this:
+Verify:
 
-![mkcert.png](mkcert.png)
+```bash
+kubectl get pods -n cattle-system
+```
 
-That's it for now, more integrations and related blog posts are coming soon.
+Retrieve the bootstrap password:
+
+```bash
+kubectl get secret \
+  --namespace cattle-system \
+  bootstrap-secret \
+  -o go-template='{{.data.bootstrapPassword|base64decode}}{{ "\n" }}'
+```
+
+Port-forward Rancher:
+
+```bash
+kubectl -n cattle-system port-forward deploy/rancher 4443:443
+```
+
+Open:
+
+```text
+https://127.0.0.1:4443
+```
+
+---
 
 ## Troubleshooting
 
-Note: we're using Calico here, if 192.178.0.0/16 is already in use within your network you must select a different pod network CIDR, replacing 192.178.0.0/16 in the kubeadm init command in `./1-deploy-kubeadm-master.sh` script as well as in the `calico.yaml` file provided in this repo.
+List Multipass instances:
+
+```bash
+multipass list
+```
+
+Show VM details:
+
+```bash
+multipass info master
+```
+
+Check cluster health:
+
+```bash
+kubectl get nodes
+kubectl get pods -A
+```
+
+Check kubelet logs:
+
+```bash
+sudo journalctl -u kubelet -f
+```
+
+Check containerd:
+
+```bash
+sudo systemctl status containerd
+```
+
+---
 
 ## Cleanup
 
+Delete all Multipass instances:
+
 ```bash
-./cleanup.sh
+multipass delete --all
+multipass purge
 ```
 
-## Blog post
+Remove local kubeconfig:
 
-A related blog post is published on medium:
+```bash
+rm -f kubeconfig.yaml
+```
 
-https://blog.kubernauts.io/simplicity-matters-kubernetes-1-16-fffbf7e84944
+---
 
-## Related resources
+## cluster-architecture
 
-https://medium.com/localz-engineering/kubernetes-traefik-locally-with-a-wildcard-certificate-e15219e5255d
-
-
-
-
-# kubeadm-with-multipass
+![architecture](architecture.png)
