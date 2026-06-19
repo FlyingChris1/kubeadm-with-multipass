@@ -2,8 +2,7 @@
 kubeconfig.yaml
 
 # Local mkcert certificates
-_wildcard.k8s.local.pem
-_wildcard.k8s.local-key.pem
+_wildcard.k8s*
 *.pem
 
 # Downloaded installer / temporary files
