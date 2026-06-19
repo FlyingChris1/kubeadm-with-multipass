@@ -37,16 +37,10 @@ The entire cluster runs locally on Multipass virtual machines and is ideal for l
 
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Cluster Architecture](#cluster-architecture)
 - [Usage](#usage)
-- [Install MetalLB](#install-metallb)
-- [Install Traefik](#install-traefik)
-- [Install Rancher](#install-rancher)
-- [Access the Cluster](#access-the-cluster)
-- [Troubleshooting](#troubleshooting)
+- [Optional](#Optional)
 - [Cleanup](#cleanup)
-- [Contributing](#contributing)
-- [License](#license)
+- [Cluster Architecture](#cluster-architecture)
 
 ---
 
@@ -147,33 +141,6 @@ worker2   Ready    node            v1.34.x
 
 ---
 
-## Cluster Architecture
-
-```text
-+-------------------+
-|      Master       |
-| Kubernetes API    |
-| Controller        |
-| Scheduler         |
-+---------+---------+
-          |
-          |
-    +-----+-----+
-    |           |
-+---+---+   +---+---+
-|Worker1|   |Worker2|
-+-------+   +-------+
-```
-
-Networking:
-
-- Container Runtime: containerd
-- CNI: Flannel
-- Load Balancer: MetalLB
-- Ingress: Traefik
-
----
-
 ## Usage
 
 Export kubeconfig:
@@ -203,9 +170,33 @@ kubectl get deployments -A
 kubectl get ingress -A
 ```
 
+Common commands:
+
+```bash
+kubectl get nodes
+kubectl get pods -A
+kubectl get svc -A
+kubectl get ingress -A
+```
+
+SSH into the control plane:
+
+```bash
+multipass shell master
+```
+
+SSH from master to workers:
+
+```bash
+ssh worker1
+ssh worker2
+```
+
 ---
 
-## Install MetalLB
+## Optional
+
+### Install MetalLB
 
 MetalLB provides LoadBalancer functionality for local Kubernetes clusters.
 
@@ -231,7 +222,7 @@ Services of type `LoadBalancer` should receive an external IP address.
 
 ---
 
-## Install Traefik
+### Install Traefik
 
 Install Traefik Ingress Controller:
 
@@ -255,7 +246,7 @@ traefik   LoadBalancer   192.168.x.x
 
 ---
 
-## Install Rancher
+### Install Rancher
 
 Install Rancher on top of the Kubernetes cluster:
 
@@ -288,38 +279,6 @@ Open:
 
 ```text
 https://127.0.0.1:4443
-```
-
----
-
-## Access the Cluster
-
-Export kubeconfig:
-
-```bash
-export KUBECONFIG=$PWD/kubeconfig.yaml
-```
-
-Common commands:
-
-```bash
-kubectl get nodes
-kubectl get pods -A
-kubectl get svc -A
-kubectl get ingress -A
-```
-
-SSH into the control plane:
-
-```bash
-multipass shell master
-```
-
-SSH from master to workers:
-
-```bash
-ssh worker1
-ssh worker2
 ```
 
 ---
@@ -376,14 +335,6 @@ rm -f kubeconfig.yaml
 
 ---
 
-## Contributing
+## cluster-architecture
 
-Contributions, bug reports, and feature requests are welcome.
-
-Feel free to open an issue or submit a pull request.
-
----
-
-## License
-
-MIT License
+![architecture](architecture.png)
