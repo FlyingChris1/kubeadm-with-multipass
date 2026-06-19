@@ -96,7 +96,7 @@ Useful links:
 Clone the repository:
 
 ```bash
-git clone https://github.com/<your-org>/kubeadm-with-multipass.git
+git clone https://github.com/FlyingChris1/kubeadm-with-multipass
 cd kubeadm-with-multipass
 ```
 
